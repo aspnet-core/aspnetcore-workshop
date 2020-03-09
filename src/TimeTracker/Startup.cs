@@ -1,3 +1,4 @@
+using System;
 using FluentValidation.AspNetCore;
 using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Builder;
@@ -15,6 +16,9 @@ namespace TimeTracker
 {
     public class Startup
     {
+        public static Action<IConfiguration, DbContextOptionsBuilder> ConfigureDbContext = (configuration, options) =>
+            options.UseSqlite(configuration.GetConnectionString("DefaultConnection"));
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -25,8 +29,7 @@ namespace TimeTracker
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddDbContext<TimeTrackerDbContext>(options =>
-                options.UseSqlite(Configuration.GetConnectionString("DefaultConnection")));
+            services.AddDbContext<TimeTrackerDbContext>(options => ConfigureDbContext(Configuration, options));
 
             services.AddJwtBearerAuthentication(Configuration);
 
@@ -34,6 +37,8 @@ namespace TimeTracker
 
             services.AddControllers().AddFluentValidation(
                 fv => fv.RegisterValidatorsFromAssemblyContaining<UserInputModelValidator>());
+
+            services.AddVersioning();
 
             services.AddOpenApi();
 

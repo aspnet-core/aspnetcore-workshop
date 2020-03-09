@@ -11,7 +11,7 @@ As a first step, let's create the classes that will form our domain model. As we
 - As a user I want to manage, add and delete clients and projects
 - As a user I want to define future hour rate
 
-Time tracking entries are per user. First thing, we need `User` class to represent our user:
+All domain classes will be added to `Domain` folder/namespace. Time tracking entries are per user. First thing, we need `User` class to represent our user:
 
 ```c#
 public class User
@@ -20,7 +20,7 @@ public class User
 
     [Required]
     public string Name { get; set; }
-    
+
     public decimal HourRate { get; set; }
 }
 ```
@@ -102,7 +102,7 @@ In order to use access database, we will use [Entity Framework Core](https://doc
 
 For now, let's install EF Core via NuGet. We'll install SQLite provider for EF Core which will in turn install EF Core as a dependency. Installing the NuGet package can be done through Visual Studio interface, NuGet Package Manager Console, .NET CLI tool which we already saw (`dotnet add package ...`), etc. Alternatively, it can be added manually to `.csproj` file. We'll use Visual Studio NuGet Package Manager interface for now.
 
-Right click on project in *Solution Explorer*, select *Manage NuGet Packages...*. Type `Microsoft.EntityFrameworkCore.Sqlite` on the *Browse* tab. Make sure that *Include prerelease* is checked as we are working with .NET Core 3.0 preview. Click *Install* on the correct package.
+Right click on project in *Solution Explorer*, select *Manage NuGet Packages...*. Type `Microsoft.EntityFrameworkCore.Sqlite` on the *Browse* tab. Click *Install* on the correct package.
 
 ![NuGet Package Manager - EF Core SQLite](images/vs-nuget-efcore-sqlite.png)
 
@@ -113,7 +113,7 @@ Now we need to create a `DbContext` class. `DbContext` instance represents a ses
 ```c#
 public class TimeTrackerDbContext : DbContext
 {
-    public TimeTrackerDbContext(DbContextOptions<TimeTrackerDbContext> options) 
+    public TimeTrackerDbContext(DbContextOptions<TimeTrackerDbContext> options)
         : base(options)
     {
     }
@@ -127,7 +127,7 @@ public class TimeTrackerDbContext : DbContext
 
 Our `TimeTrackerDbContext` inherits from base `DbContext` and initialize some options in the constructor.
 
-Finally, open your `Startup` class and add the following at the top of your `ConfigureServices` method to add our class to service registration and enable it for depencency injection:
+Finally, open your `Startup` class and add the following at the top of your `ConfigureServices` method to add our class to service registration and enable it for dependency injection:
 
 ```c#
 services.AddDbContext<TimeTrackerDbContext>(options =>
@@ -138,7 +138,7 @@ Done, we have set up our database!
 
 ## Migrations
 
-While working with databases, it's a good practice not to expect that the database exists and up to date with the current schema (database objects) the application is using. When working with EF Core, we can use EF Core Migrations to create initial schema of our database and to version it throughout all the changes we have in our domain model. E.g. if we add a new property to our domain model class, we also need to have a new column in the corresponding database table.
+While working with databases, it's a good practice not to expect that the database exists and is up to date with the current schema (database objects) the application is using. When working with EF Core, we can use EF Core Migrations to create initial schema of our database and to version it throughout all the changes we have in our domain model. E.g. if we add a new property to our domain model class, we also need to have a new column in the corresponding database table.
 
 EF Core Migrations are done using EF Core tools and we need to install them. We'll do a local tool installation. Since we haven't used tools before in our project, let's first create a tool manifest file. `dotnet-tools.json` manifest file will contain info about all the tools our application is using and their versions.
 
@@ -150,7 +150,7 @@ It will create a new manifest file. You only need to do this once, no matter how
 
 Next, run the following command to install EF CLI tool:
 
-    dotnet tool install dotnet-ef --version 3.0.0-preview6.19304.10
+    dotnet tool install dotnet-ef
 
 Now, navigate to the project directory `src\TimeTracker\` and run this command:
 
@@ -187,36 +187,54 @@ protected override void OnModelCreating(ModelBuilder modelBuilder)
         new { Id = 1L, Name = "Project 1", ClientId = 1L },
         new { Id = 2L, Name = "Project 2", ClientId = 1L },
         new { Id = 3L, Name = "Project 3", ClientId = 2L });
+
+    modelBuilder.Entity<TimeEntry>().HasData(
+        new
+        {
+            Id = 1L,
+            UserId = 1L,
+            ProjectId = 1L,
+            EntryDate = new DateTime(2019, 7, 1),
+            Hours = 5,
+            HourRate = 25m,
+            Description = "Time entry description 1"
+        },
+        new
+        {
+            Id = 2L,
+            UserId = 1L,
+            ProjectId = 2L,
+            EntryDate = new DateTime(2019, 7, 1),
+            Hours = 2,
+            HourRate = 25m,
+            Description = "Time entry description 2"
+        },
+        new
+        {
+            Id = 3L,
+            UserId = 1L,
+            ProjectId = 3L,
+            EntryDate = new DateTime(2019, 7, 1),
+            Hours = 1,
+            HourRate = 25m,
+            Description = "Time entry description 3"
+        },
+        new
+        {
+            Id = 4L,
+            UserId = 2L,
+            ProjectId = 3L,
+            EntryDate = new DateTime(2019, 7, 1),
+            Hours = 8,
+            HourRate = 30m,
+            Description = "Time entry description 4"
+        });
 }
 ```
-
-This will create initial users, clients and projects. Unfortunately, there's a bug in current implementation for SQLite which prevents us to seed `TimeEntries`. When we add the following code to `OnModelCreating` method, `dotnet ef` will throw an error.
-
-```c#
-modelBuilder.Entity<TimeEntry>().HasData(
-    new
-    {
-        Id = 1L,
-        UserId = 1L,
-        ProjectId = 1L,
-        EntryDate = new DateTime(2019, 7, 1),
-        Hours = 5,
-        HourRate = 25m,
-        Description = "Time entry description 1"
-    });
-```
-
-The error that this will produce is:
-
-    System.InvalidCastException: Unable to cast object of type 'System.String' to type 'System.Int64'.
-
-The issue can be tracked [here](https://github.com/aspnet/EntityFrameworkCore/issues/16209).
 
 OK, now that we have at least some seed data, let's generate the migration for it. Run the following command to create migration:
 
     dotnet ef migrations add "SeedData" --output-dir "Data/Migrations"
-
-Note: Current preview version has other issues too. It's possible that you will get the wrong data generated when adding a migration. Check the migration file content.
 
 Finally, run this command to update the database:
 

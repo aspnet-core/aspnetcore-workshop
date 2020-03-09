@@ -24,7 +24,6 @@ namespace TimeTracker.Tests.UnitTests
             var dbContext = new TimeTrackerDbContext(options);
             var logger = new FakeLogger<UsersController>();
 
-            // HACK: EF Core Preview 6 has issues, adding new values here
             dbContext.Users.Add(new User {Id = 1, Name = "Test User 1", HourRate = 15});
             dbContext.Users.Add(new User {Id = 2, Name = "Test User 2", HourRate = 20});
             dbContext.Users.Add(new User {Id = 3, Name = "Test User 3", HourRate = 25});
@@ -36,10 +35,9 @@ namespace TimeTracker.Tests.UnitTests
         [Fact]
         public async Task GetById_IdIsNonExisting_ReturnsNotFoundResult()
         {
-            // EF Core Preview 6 issues - this will throw NullReferenceException
             var result = await _controller.GetById(0);
 
-            Assert.IsType<NotFoundResult>(result);
+            Assert.IsType<NotFoundResult>(result.Result);
         }
 
         [Fact]
@@ -84,7 +82,6 @@ namespace TimeTracker.Tests.UnitTests
         [Fact]
         public async Task Delete_IdIsNotExisting_ReturnsNotFoundResult()
         {
-            // EF Core Preview 6 issues - this will throw NullReferenceException
             var result = await _controller.Delete(0);
 
             Assert.IsType<NotFoundResult>(result);
